@@ -59,8 +59,8 @@ export type Simplified<T> =
     T extends Promise<infer U> ? Promise<Simplified<U>> :
     T extends Array<infer U> ? Simplified<U>[] :
     T extends Set<infer U> ? Simplified<U>[] :
-    T extends Map<infer K extends string | number, infer U> ? { [Key in K]: Simplified<U> } :
-    T extends Map<infer K, infer U> ? [[Simplified<K>, Simplified<U>]] :
+    T extends Map<infer K extends string | number, infer U> ? { [Key in K]: Simplified<U extends undefined ? never : U> } :
+    T extends Map<infer K, infer U> ? [[Simplified<K>, Simplified<U extends undefined ? never : U>]] :
     T extends Iterable<infer U> ? Simplified<U>[] :
     T extends ISimplifiable<infer U> ? U :
     T extends object ? { [K in keyof T as K extends symbol ? never : Simplified<T[K]> extends never ? never : K]: Simplified<T[K]> } :
@@ -104,6 +104,7 @@ export function isSimple(x: any): x is Simple {
  */
 export function simplify<T>(x: T): Simplified<T> {
 
+    // istanbul ignore next
     switch (typeof x) {
 
         // Primative pass-through
@@ -150,7 +151,7 @@ export function simplify<T>(x: T): Simplified<T> {
 
             // Array-like
             if (Array.isArray(x)) return x.map(y => simplify(y)) as any
-            if (isSet(x)) return simplify(Array.from(x)).sort() as any     // simplify before sort!
+            if (isSet(x)) return simplify(Array.from(x)).sort(simplifiedCompare) as any     // simplify before sort!
 
             // Map, which can have non-primative keys which means we need an alternative format.
             if (x instanceof Map) {
@@ -186,7 +187,7 @@ export function simplify<T>(x: T): Simplified<T> {
             return Object.fromEntries(entries) as any
 
         // Cannot get here because we exhausted the `typeof`, but this way Typescript doesn't winge about lacking a return result.
-        default:
+        default: // istanbul ignore next
             throw new Error(`cannot simplify: ${x}`)
     }
 }
@@ -347,26 +348,16 @@ export function simplifiedCompare(a: Simple, b: Simple): number {
         return 1;
     }
 
-    // Generic object (including serializable ones)
-    if (typeof a === "object") {
-        if (typeof b == "object") {
-            const ak = Object.keys(a), bk = Object.keys(b);
-            const len = Math.min(ak.length, bk.length);
-            for (let k = 0; k < len; ++k) {
-                let cmp = ak[k].localeCompare(bk[k]);
-                if (cmp !== 0) return cmp;
-                cmp = simplifiedCompare(a[ak[k]], b[bk[k]]);
-                if (cmp !== 0) return cmp;
-            }
-            return ak.length - bk.length;
-        }
-        return -1
-    } else if (typeof b === "object") {
-        return 1;
+    // If we got here, both `a` and `b` must be non-null objects.
+    const ak = Object.keys(a), bk = Object.keys(b);
+    const len = Math.min(ak.length, bk.length);
+    for (let k = 0; k < len; ++k) {
+        let cmp = ak[k].localeCompare(bk[k]);
+        if (cmp !== 0) return cmp;
+        cmp = simplifiedCompare(a[ak[k]], b[bk[k]]);
+        if (cmp !== 0) return cmp;
     }
-
-    // Shouldn't get here!
-    return 0
+    return ak.length - bk.length;
 }
 
 
@@ -387,7 +378,7 @@ export function simplifiedToDisplay(x: Simple, depth: number = 0): string {
     switch (typeof x) {
         case 'string':
             x = x.replaceAll('\t', '\\t').replaceAll('\n', '\\n')
-            if (x.length > 100) x = x.substring(0, 120) + '…'
+            if (x.length > 120) x = x.substring(0, 120) + '…'
             return x
         case 'object':
             if (x === null) return "null"

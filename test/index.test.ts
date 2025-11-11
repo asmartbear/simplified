@@ -80,6 +80,10 @@ test('simplify primatives', () => {
     expect(f({ "pizza": "fine", [Symbol("taco")]: "good", 123: "great" })).toEqual({ "123": "great", pizza: "fine" })
 })
 
+test('simplify functions', () => {
+    expect(() => simplify(() => 123)).toThrow()     // functions throw errors
+})
+
 test('simplify sets', () => {
     expect(simplify(new Set())).toEqual([])
     expect(simplify(new Set([1, "foo"]))).toEqual([1, "foo"])
@@ -88,7 +92,7 @@ test('simplify sets', () => {
 
 test('simplify maps', () => {
     // primative keys go to objects
-    expect(simplify(new Map([["foo", 123], ["bar", 321]]))).toEqual({ bar: 321, foo: 123 })
+    expect(simplify(new Map([["foo", 123], ["baz", undefined], ["bar", 321]]))).toEqual({ bar: 321, foo: 123 })
     expect(simplify(new Map<string | number, string | number>([["foo", 123], [321, "bar"]]))).toEqual({ 321: "bar", foo: 123 })
     // complex keys go to a pair-list, sorted in the simplify way
     expect(simplify(new Map<number[], string>([[[123], "foo"], [[321], "bar"]]))).toEqual([[[123], "foo"], [[321], "bar"]])
@@ -228,6 +232,7 @@ test('simplified to display string', () => {
     expect(f("foo bar")).toEqual("foo bar")
     expect(f("foo\nbar ")).toEqual("foo\\nbar ")
     expect(f(" foo\tbar")).toEqual(" foo\\tbar")
+    expect(f("0123456789".repeat(200))).toEqual("0123456789".repeat(12) + '…')
 
     expect(f(0)).toEqual("0")
     expect(f(-9.2)).toEqual("-9.2")
@@ -279,7 +284,7 @@ test("simplified comparison", () => {
         Number.NaN, Number.NEGATIVE_INFINITY, Number.MIN_SAFE_INTEGER, -1, -0.001, -Number.EPSILON, 0, Number.EPSILON, 0.001, 1, Number.MAX_SAFE_INTEGER, Number.POSITIVE_INFINITY,
         "", "a", "aa", "ab", "ac", "az", "b", "ba", "bb", "bc", "bz", "c", "ca", "cb", "cc", "cz", "z", "za", "zb", "zc", "zz",
         [], [1], [1, 2], [1, 2, 3], [1, 2, 3, 4], [1, 2, 3, 4, 5], [2], [2, 1], [3, 1], [3, 2], [3, 2, 1],
-        {}, { a: 1 }, { a: 1, b: 2 }, { a: 1, b: 2, c: 3 }, { a: 1, b: 2, c: 3, d: 4 }, { a: 1, b: 2, c: 3, d: 4, e: 5 }, { b: 2 }, { b: 2, c: 1 },
+        {}, { a: 1 }, { a: 1, b: 2 }, { a: 1, b: 2, c: 3 }, { a: 1, b: 2, c: 3, d: 4 }, { a: 1, b: 2, c: 3, d: 4, e: 5 }, { a: 1, b: 3 }, { a: 2, b: 2 }, { b: 2 }, { b: 2, c: 1 },
     ]
     for (let i = 0; i < TOTAL_ORDERING.length; ++i) {
         for (let j = 0; j < TOTAL_ORDERING.length; ++j) {
