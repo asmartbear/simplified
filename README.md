@@ -1,16 +1,22 @@
-# Citation
+# Simplified
 
-Creates formatting citations against URLs, DOI, ISBN, or manual fields.
+Able to recursively simplify nearly any Javascript type into something JSON plus undefined.
+
+Promises are (recursively) chained into simplified promises.
+
+Can unwrap promises recursively into fully simplified.
+
+Lots of tools on simplified data, like various formats of display, comparison, hashing, etc..
+
+Use `SimplifiedWalker` like a typesafe recursive `Array.map()` on simplified types.
 
 ## Usage
 
 ```typescript
-import { fetchCitationMetadata, formatCitation } from "@asmartbear/citation"
-// Fetch meta-data information, loading from the internet from
-// DOI references, ISBN numbers, or meta-data from websites over URLs.
-const meta = await fetchCitationMetadata({'isbn':'123456'})
-// Formatting a citation with options.
-console.log(formatCitation(meta,{format:'html'}))
+import { simplify } from "@asmartbear/simplified"
+
+const s = simplify({a:new MyClass(), b: new Set([1,2,3])})
+const sp = await simplifiedAwait(...)
 ```
 
 ## Development
