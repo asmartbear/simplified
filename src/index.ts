@@ -38,7 +38,7 @@ export type ResolvedPromiseSimple<T> =
 ;
 
 /**
- * Something that converts to JSON.  Since JSON is a subset of Simple, we can use our Simple type definition.
+ * Something that knows how to convert itself to a `Simple` type.
  */
 export interface ISimplifiable<T extends Simple> {
     toSimplified: () => T
@@ -56,6 +56,7 @@ export type Simplified<T> =
     T extends Function ? never :
     T extends Date ? { t: number } :
     T extends RegExp ? string :
+    T extends URL ? string :
     T extends Promise<infer U> ? Promise<Simplified<U>> :
     T extends Array<infer U> ? Simplified<U>[] :
     T extends Set<infer U> ? Simplified<U>[] :
@@ -69,7 +70,7 @@ export type Simplified<T> =
 /** A type that is cleanly and reliably simplifiable, including special cases but excluding the case of the generic class. */
 export type Simplifiable =
     undefined | null | boolean | number | string | symbol | bigint
-    | Date | RegExp
+    | Date | RegExp | URL
     | Promise<Simplifiable>
     | Set<Simplifiable> | Map<Simplifiable, Simplifiable> | Iterable<Simplifiable>
     | ISimplifiable<Simple>
@@ -148,6 +149,7 @@ export function simplify<T>(x: T): Simplified<T> {
             if (isDate(x)) return { t: x.getTime() } as any
             if (isRegExp(x)) return x.toString() as any
             if (isISimplifiable(x)) return x.toSimplified() as any
+            if (x instanceof URL) return x.toString() as any
 
             // Array-like
             if (Array.isArray(x)) return x.map(y => simplify(y)) as any

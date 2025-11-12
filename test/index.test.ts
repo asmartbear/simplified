@@ -110,6 +110,10 @@ test('simplify regex', () => {
     expect(simplify(new RegExp(/\s*(\w+)\s*/gi))).toEqual("/\\s*(\\w+)\\s*/gi")
 })
 
+test('simplify URL', () => {
+    expect(simplify(new URL("/foo/bar.html?a=1", "https://something.com"))).toEqual("https://something.com/foo/bar.html?a=1")
+})
+
 test('simplify generator', () => {
     function* gen(n: number = 4) { for (let i = 0; i < n; ++i) yield i }
 
