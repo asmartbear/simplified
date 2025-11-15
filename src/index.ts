@@ -53,7 +53,7 @@ export type Simplified<T> =
     T extends undefined | null | boolean | number | string ? T :
     T extends symbol ? string :
     T extends bigint ? string | number :
-    T extends Function ? string :
+    T extends Function ? never :
     T extends Date ? { t: number } :
     T extends RegExp ? string :
     T extends URL ? string :
@@ -185,7 +185,8 @@ export function simplify<T>(x: T): Simplified<T> {
             if (__class__ !== "Object") entries.push(["__class__", __class__])
             for (const [k, v] of Object.entries(x).sort(simplifiedCompare)) {
                 if (v === undefined) continue
-                entries.push([k, simplify(v)])
+                if (typeof v === "function") continue
+                else entries.push([k, simplify(v)])
             }
             return Object.fromEntries(entries) as any
 
