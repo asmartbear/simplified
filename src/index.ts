@@ -53,7 +53,7 @@ export type Simplified<T> =
     T extends undefined | null | boolean | number | string ? T :
     T extends symbol ? string :
     T extends bigint ? string | number :
-    T extends Function ? never :
+    T extends Function ? string :
     T extends Date ? { t: number } :
     T extends RegExp ? string :
     T extends URL ? string :
@@ -136,7 +136,8 @@ export function simplify<T>(x: T): Simplified<T> {
         // Functions are mostly unsupported, but e.g. classes are functions
         case 'function':
             if (isClass(x)) return x.name as any
-            throw new Error(`cannot simplify function: ${x.name}`)
+            return `${x.name}()` as any
+        // throw new Error(`cannot simplify function: ${x.name}`)
 
         // Last choice!
         case 'object':

@@ -81,7 +81,9 @@ test('simplify primatives', () => {
 })
 
 test('simplify functions', () => {
-    expect(() => simplify(() => 123)).toThrow()     // functions throw errors
+    function myFunc() { }
+    expect(simplify(myFunc)).toEqual("myFunc()")
+    expect(simplify(() => 123)).toEqual("()")
 })
 
 test('simplify sets', () => {
