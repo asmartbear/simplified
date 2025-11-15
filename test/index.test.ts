@@ -199,6 +199,14 @@ test("simplify nested promises", async () => {
     expect(result).toEqual({ a: 1, s: [1, 2, 3], z: [1, 2, [1, 2, 3]] })       // waiting on the one promise resolves everything
 })
 
+test('simplify recursive objects', () => {
+    const p: any = { p: 1 }
+    const q: any = { q: 2, a: p }
+    p.b = q
+    expect(simplify(p)).toEqual({ p: 1, b: { q: 2, a: null } })
+    expect(simplify(q)).toEqual({ q: 2, a: { p: 1, b: null } })
+})
+
 test('simplify walker', async () => {
     const walker = new MyTestWalker()
     expect(walker.walk(undefined)).toEqual("undef")

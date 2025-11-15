@@ -102,8 +102,11 @@ export function isSimple(x: any): x is Simple {
  * 
  * The result is nearly always `Simple`; exceptions are things like `Promise<Simple>`, but this
  * can arise only if the input was a Promise, which Typescript already knows.
+ * 
+ * @param x the value to simplify
+ * @param skip if given, this is a set of objects to report as `null` rather than simplify, often to prevent infinite descent.
  */
-export function simplify<T>(x: T): Simplified<T> {
+export function simplify<T>(x: T, skip?: Set<any>): Simplified<T> {
 
     // istanbul ignore next
     switch (typeof x) {
@@ -141,10 +144,8 @@ export function simplify<T>(x: T): Simplified<T> {
 
         // Last choice!
         case 'object':
+            // Trivial
             if (x === null) return null as any
-
-            // Promises get chained onto and then returned as-is for final resolution.
-            if (isPromise(x)) return x.then(simplify) as any
 
             // Object that we understand, overriding standard algorithm
             if (isDate(x)) return { t: x.getTime() } as any
@@ -152,9 +153,17 @@ export function simplify<T>(x: T): Simplified<T> {
             if (isISimplifiable(x)) return x.toSimplified() as any
             if (x instanceof URL) return x.toString() as any
 
+            // No infinite descent
+            if (skip && skip.has(x)) return null as any
+            if (!skip) skip = new Set()
+            skip.add(x)
+
+            // Promises get chained onto and then returned as-is for final resolution.
+            if (isPromise(x)) return x.then(y => simplify(y, skip)) as any
+
             // Array-like
-            if (Array.isArray(x)) return x.map(y => simplify(y)) as any
-            if (isSet(x)) return simplify(Array.from(x)).sort(simplifiedCompare) as any     // simplify before sort!
+            if (Array.isArray(x)) return x.map(y => simplify(y, skip)) as any
+            if (isSet(x)) return simplify(Array.from(x), skip).sort(simplifiedCompare) as any     // simplify before sort!
 
             // Map, which can have non-primative keys which means we need an alternative format.
             if (x instanceof Map) {
@@ -162,7 +171,7 @@ export function simplify<T>(x: T): Simplified<T> {
                 const result: [Simple, Simple][] = []
                 for (const [f, v] of x.entries()) {
                     if (v === undefined) continue       // no undefined fields
-                    result.push([simplify(f), simplify(v)])
+                    result.push([simplify(f, skip), simplify(v, skip)])
                     switch (typeof f) {
                         case 'string':
                         case 'number':
@@ -177,7 +186,7 @@ export function simplify<T>(x: T): Simplified<T> {
             }
 
             // Catch-all for all other iterable things -- generators, buffer arrays, etc..
-            if (isIterable(x)) return Array.from(x).map(y => simplify(y)) as any
+            if (isIterable(x)) return Array.from(x).map(y => simplify(y, skip)) as any
 
             // Normal object, which means primative keys that don't need to be transformed and always fit into another object.
             const entries: [string, Simple][] = []
@@ -186,7 +195,7 @@ export function simplify<T>(x: T): Simplified<T> {
             for (const [k, v] of Object.entries(x).sort(simplifiedCompare)) {
                 if (v === undefined) continue
                 if (typeof v === "function") continue
-                else entries.push([k, simplify(v)])
+                else entries.push([k, simplify(v, skip)])
             }
             return Object.fromEntries(entries) as any
 
