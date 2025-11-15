@@ -1,13 +1,25 @@
 import { createHash } from 'crypto';
 import { isPromise, isSet, isRegExp, isDate } from 'util/types';
 
-/** True if the given variable is actually a class */
-function isClass(x: any): x is new (...args: any[]) => any {
-    return typeof x === 'function' && /^class\s/.test(Function.prototype.toString.call(x))
+/** True if the given variable is itself a class. */
+export function isClassObject(x: any): x is new (...args: any[]) => any {
+    if (typeof x !== 'function') return false        // not possible
+    const proto = x.prototype
+    if (!proto) return false       // plain function
+    if (/^\s*class\b/.test(Function.prototype.toString.call(x))) return true        // user-created classes
+    return proto.constructor !== x || Object.getOwnPropertyNames(proto).length > 1      // built-ins
+}
+
+/** True if the given thing is a plain object -- no constructor or parent class -- though fields can be anything, including functions. */
+export function isPlainObject(x: any): x is object {
+    if (!x || typeof x !== "object") return false
+    // istanbul ignore next
+    const name = x.constructor?.name
+    return name === undefined || name === "Object"
 }
 
 /** True if the given variable is iterable */
-function isIterable<T>(x: any): x is Iterable<T> {
+export function isIterable<T>(x: any): x is Iterable<T> {
     return typeof x === 'object' && typeof x[Symbol.iterator] === 'function'
 }
 
@@ -89,7 +101,7 @@ export function isSimple(x: any): x is Simple {
         case 'object':
             if (x === null) return true
             if (Array.isArray(x)) return x.every(isSimple)
-            if (x.constructor.name === "Object") return Object.values(x).every(isSimple)
+            if (isPlainObject(x)) return Object.values(x).every(isSimple)
     }
     return false
 }
@@ -138,7 +150,7 @@ export function simplify<T>(x: T, skip?: Set<any>): Simplified<T> {
 
         // Functions are mostly unsupported, but e.g. classes are functions
         case 'function':
-            if (isClass(x)) return x.name as any
+            if (isClassObject(x)) return x.name as any
             return `${x.name}()` as any
         // throw new Error(`cannot simplify function: ${x.name}`)
 
@@ -190,8 +202,8 @@ export function simplify<T>(x: T, skip?: Set<any>): Simplified<T> {
 
             // Normal object, which means primative keys that don't need to be transformed and always fit into another object.
             const entries: [string, Simple][] = []
-            const __class__ = x.constructor.name
-            if (__class__ !== "Object") entries.push(["__class__", __class__])
+            const __class__ = x.constructor?.name
+            if (__class__ && __class__ !== "Object") entries.push(["__class__", __class__])
             for (const [k, v] of Object.entries(x).sort(simplifiedCompare)) {
                 if (v === undefined) continue
                 if (typeof v === "function") continue

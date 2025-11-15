@@ -1,10 +1,11 @@
 import { isPromise } from 'util/types';
-import { isSimple, Simple, simplifiedAwait, simplifiedCompare, simplifiedJoin, simplifiedToDisplay, simplifiedToHash, simplifiedToJSON, SimplifiedWalker, simplify, simplifyOpaqueType } from '../src/index';
+import { isClassObject, isPlainObject, isSimple, Simple, simplifiedAwait, simplifiedCompare, simplifiedJoin, simplifiedToDisplay, simplifiedToHash, simplifiedToJSON, SimplifiedWalker, simplify, simplifyOpaqueType } from '../src/index';
 
 class MyTestClass {
     public a: number = 123
     private b: string = "321"
     public toString() { return this.b }
+    public foo() { return this.b + this.a }
 }
 
 class MyTestJSON {
@@ -21,6 +22,64 @@ class MyTestWalker extends SimplifiedWalker<string, "undef", "null", "t" | "f"> 
     doArray(x: string[]) { return x.join(',') }
     doObject(x: [string | number, string][]) { return x.join(',') }
 }
+
+test('is plain object', () => {
+    const f = isPlainObject
+    expect(f(undefined)).toBe(false)
+    expect(f(null)).toBe(false)
+    expect(f(true)).toBe(false)
+    expect(f(123)).toBe(false)
+    expect(f("{a:1}")).toBe(false)
+    expect(f([])).toBe(false)
+    expect(f([1, 2, 3])).toBe(false)
+    expect(f(parseInt)).toBe(false)
+    expect(f(() => 123)).toBe(false)
+
+    expect(f({})).toBe(true)
+    expect(f({ a: 1 })).toBe(true)
+    expect(f({ a: 1, b: () => { } })).toBe(true)
+    expect(f(Object.fromEntries([["a", 1]]))).toBe(true)
+    expect(f(new Object({ a: 1 }))).toBe(true)
+    expect(f({ constructor: true })).toBe(true)     // tried to fake me out reusing this word!
+
+    expect(f(new Date())).toBe(false)
+    expect(f(new Set())).toBe(false)
+    expect(f(/foo/)).toBe(false)
+    expect(f(new MyTestClass())).toBe(false)
+    expect(f(MyTestClass)).toBe(false)
+    expect(f(Date)).toBe(false)
+    expect(f(class { })).toBe(false)
+})
+
+test('is class object', () => {
+    function localFunc() { return 213; }
+    const f = isClassObject
+    expect(f(undefined)).toBe(false)
+    expect(f(null)).toBe(false)
+    expect(f(true)).toBe(false)
+    expect(f(123)).toBe(false)
+    expect(f("{a:1}")).toBe(false)
+    expect(f([])).toBe(false)
+    expect(f([1, 2, 3])).toBe(false)
+    expect(f({})).toBe(false)
+    expect(f({ a: 1 })).toBe(false)
+    expect(f({ a: 1, b: () => { } })).toBe(false)
+    expect(f(Object.fromEntries([["a", 1]]))).toBe(false)
+    expect(f(new Object({ a: 1 }))).toBe(false)
+    expect(f(new Date())).toBe(false)
+    expect(f(/foo/)).toBe(false)
+    expect(f(new MyTestClass())).toBe(false)
+    expect(f(parseInt)).toBe(false)
+    expect(f(localFunc)).toBe(false)
+    expect(f(() => 123)).toBe(false)
+
+    expect(f(MyTestClass)).toBe(true)
+    expect(f(class { })).toBe(true)
+    expect(f(Date)).toBe(true)
+    expect(f(RegExp)).toBe(true)
+    expect(f(Set)).toBe(true)
+    expect(f(Map)).toBe(true)
+})
 
 test('is simple', () => {
     const f = isSimple
@@ -39,6 +98,10 @@ test('is simple', () => {
 
     expect(f(new Date())).toBe(false)
     expect(f(/adf/)).toBe(false)
+    expect(f(MyTestClass)).toBe(false)
+    expect(f(Date)).toBe(false)
+    expect(f(Set)).toBe(false)
+    expect(f(RegExp)).toBe(false)
     expect(f(new MyTestClass())).toBe(false)
     expect(f({ foo: "bar", a: new MyTestClass() })).toBe(false)
 })
