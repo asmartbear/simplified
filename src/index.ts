@@ -30,7 +30,7 @@ export function getClassOf<T>(x: T): (T extends object ? ClassOf<T> : undefined)
 
 /** True if the given variable is iterable */
 export function isIterable<T>(x: any): x is Iterable<T> {
-    return typeof x === 'object' && typeof x[Symbol.iterator] === 'function'
+    return typeof x === 'object' && x != null && (typeof x[Symbol.iterator]) === 'function'
 }
 
 type Primative = undefined | null | boolean | number | string;
