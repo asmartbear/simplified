@@ -1,5 +1,5 @@
 import { isPromise } from 'util/types';
-import { isClassObject, isPlainObject, isSimple, Simple, simplifiedAwait, simplifiedCompare, simplifiedJoin, simplifiedToDisplay, simplifiedToHash, simplifiedToJSON, SimplifiedWalker, simplify, simplifyOpaqueType } from '../src/index';
+import { getClassOf, isClassObject, isPlainObject, isSimple, Simple, simplifiedAwait, simplifiedCompare, simplifiedJoin, simplifiedToDisplay, simplifiedToHash, simplifiedToJSON, SimplifiedWalker, simplify, simplifyOpaqueType } from '../src/index';
 
 class MyTestClass {
     public a: number = 123
@@ -79,6 +79,35 @@ test('is class object', () => {
     expect(f(RegExp)).toBe(true)
     expect(f(Set)).toBe(true)
     expect(f(Map)).toBe(true)
+})
+
+test('get class of object', () => {
+    const f = getClassOf
+    expect(f(undefined)).toBeUndefined()
+    expect(f(null)).toBeUndefined()
+    expect(f(true)).toBeUndefined()
+    expect(f(123)).toBeUndefined()
+    expect(f("{a:1}")).toBeUndefined()
+    expect(f(parseInt)).toBeUndefined()
+    expect(f(() => 123)).toBeUndefined()
+
+    expect(f({})).toBeUndefined()
+    expect(f({ a: 1 })).toBeUndefined()
+    expect(f({ a: 1, b: () => { } })).toBeUndefined()
+    expect(f(Object.fromEntries([["a", 1]]))).toBeUndefined()
+    expect(f(new Object({ a: 1 }))).toBeUndefined()
+    expect(f({ constructor: true })).toBeUndefined()
+
+    expect(f(new Date())).toBe(Date)
+    expect(f(new Set())).toBe(Set)
+    expect(f(/foo/)).toBe(RegExp)
+    expect(f(new MyTestClass())).toBe(MyTestClass)
+    expect(f([])).toBe(Array)
+    expect(f([1, 2, 3])).toBe(Array)
+
+    expect(f(MyTestClass)).toBeUndefined()
+    expect(f(Date)).toBeUndefined()
+    expect(f(class { })).toBeUndefined()
 })
 
 test('is simple', () => {

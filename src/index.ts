@@ -1,8 +1,10 @@
 import { createHash } from 'crypto';
 import { isPromise, isSet, isRegExp, isDate } from 'util/types';
 
+type ClassOf<T> = (abstract new (...args: any[]) => T) | (new (...args: any[]) => T);
+
 /** True if the given variable is itself a class. */
-export function isClassObject(x: any): x is new (...args: any[]) => any {
+export function isClassObject(x: any): x is ClassOf<any> {
     if (typeof x !== 'function') return false        // not possible
     const proto = x.prototype
     if (!proto) return false       // plain function
@@ -16,6 +18,14 @@ export function isPlainObject(x: any): x is object {
     // istanbul ignore next
     const name = x.constructor?.name
     return name === undefined || name === "Object"
+}
+
+/** Returns the class object that this object instantiated from, or `undefined` if it wasn't that kind of object */
+export function getClassOf<T>(x: T): (T extends object ? ClassOf<T> : undefined) | undefined {
+    if (!x || typeof x !== "object") return undefined
+    // istanbul ignore next
+    const name = x.constructor?.name
+    return (name === undefined || name === "Object") ? undefined : x.constructor as any
 }
 
 /** True if the given variable is iterable */
@@ -202,8 +212,8 @@ export function simplify<T>(x: T, skip?: Set<any>): Simplified<T> {
 
             // Normal object, which means primative keys that don't need to be transformed and always fit into another object.
             const entries: [string, Simple][] = []
-            const __class__ = x.constructor?.name
-            if (__class__ && __class__ !== "Object") entries.push(["__class__", __class__])
+            const cls = getClassOf(x)
+            if (cls) entries.push(["__class__", cls.name])
             for (const [k, v] of Object.entries(x).sort(simplifiedCompare)) {
                 if (v === undefined) continue
                 if (typeof v === "function") continue
